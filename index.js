@@ -25,6 +25,7 @@ const DEFAULT_TIME_LABELS = {
 
 class CountDown extends React.Component {
   static propTypes = {
+    id: PropTypes.string,
     digitStyle: PropTypes.object,
     digitTxtStyle: PropTypes.object,
     timeLabelStyle: PropTypes.object,
@@ -36,7 +37,6 @@ class CountDown extends React.Component {
     onChange: PropTypes.func,
     onPress: PropTypes.func,
     onFinish: PropTypes.func,
-    running: PropTypes.bool
   };
 
   state = {
@@ -47,14 +47,11 @@ class CountDown extends React.Component {
 
   constructor(props) {
     super(props);
-    if(this.props.running != false) {
-      this.timer = setInterval(this.updateTimer, 1000);
-    }
+    this.timer = setInterval(this.updateTimer, 1000);
   }
 
   componentDidMount() {
     AppState.addEventListener('change', this._handleAppStateChange);
-
   }
 
   componentWillUnmount() {
@@ -63,29 +60,17 @@ class CountDown extends React.Component {
   }
 
   componentWillReceiveProps(nextProps) {
-    if (this.props.until !== nextProps.until) {
+    if (this.props.until !== nextProps.until || this.props.id !== nextProps.id) {
       this.setState({
         lastUntil: this.state.until,
         until: Math.max(nextProps.until, 0)
       });
-      if ((!this.timer)&&(nextProps.running != false)) {
-        this.timer = setInterval(this.updateTimer, 1000);
-      }
-    }
-    if (this.props.running !== nextProps.running) {
-      if(nextProps.running == false) {
-        clearInterval(this.timer);
-        this.timer = null;
-      }
-      if(nextProps.running == true) {
-        this.timer = setInterval(this.updateTimer, 1000);
-      }
     }
   }
 
   _handleAppStateChange = currentAppState => {
     const {until, wentBackgroundAt} = this.state;
-    if (currentAppState === 'active' && wentBackgroundAt) {
+    if (currentAppState === 'active' && wentBackgroundAt && this.props.running) {
       const diff = (Date.now() - wentBackgroundAt) / 1000.0;
       this.setState({
         lastUntil: until,
@@ -110,7 +95,7 @@ class CountDown extends React.Component {
   updateTimer = () => {
     const {lastUntil, until} = this.state;
 
-    if (lastUntil === until) {
+    if (lastUntil === until || !this.props.running) {
       return;
     }
     if (until === 1 || (until === 0 && lastUntil !== 1)) {
@@ -128,7 +113,10 @@ class CountDown extends React.Component {
       if (this.props.onChange) {
         this.props.onChange(until);
       }
-      this.setState({lastUntil: until, until: until - 1});
+      this.setState({
+        lastUntil: until,
+        until: Math.max(0, until - 1)
+      });
     }
   };
 
@@ -234,7 +222,7 @@ CountDown.defaultProps = {
   showSeparator: false,
   until: 0,
   size: 15,
-  running: true
+  running: true,
 };
 
 const styles = StyleSheet.create({
@@ -273,4 +261,5 @@ const styles = StyleSheet.create({
   },
 });
 
-module.exports = CountDown;
+export default CountDown;
+export { CountDown };
